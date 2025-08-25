@@ -1,0 +1,80 @@
+============================================================
+TOKEN SHORT BACKTEST REPORT
+============================================================
+Generated: 2025-08-25 18:56:35
+
+STRATEGY OVERVIEW
+--------------------
+Strategy Type: Buy-and-Hold SHORT Position
+Description: Enter short position on day 1 and hold until end
+Capital Allocation: 95% short position, 5% cash buffer
+
+BACKTEST PERIOD
+--------------------
+Entry Date: 2025-04-01 00:04:32
+Exit Date: 2025-06-29 23:03:50
+Duration: 89 days
+Total Data Points: 2159
+
+TOKEN PRICE ANALYSIS
+--------------------
+Entry Price: 1.45e-06
+Final Price: 6.93e-07
+Token Price Change: -52.20%
+Price Direction: DOWN (Favorable for SHORT: YES)
+
+PORTFOLIO PERFORMANCE
+-------------------------
+Initial Capital: $10,000.00
+Final Portfolio Value: $14,959.25
+Total Return: 49.59%
+Absolute Profit/Loss: $4,959.25
+Max Drawdown: -27.69%
+Sharpe Ratio: 0.52
+
+POSITION DETAILS
+--------------------
+Shares Shorted: 6,549,333,538 tokens
+Position Value at Entry: $9,500.00
+Cash Reserved: $500.00
+Leverage Used: 0.9x
+
+KEY PERFORMANCE MILESTONES
+------------------------------
+BEST PERFORMANCE:
+  Date: 2025-06-22 20:03:32
+  Portfolio Value: $15,285.31
+  Token Price: 6.44e-07
+  Unrealized P&L: $5,285.31
+  Return at Peak: 52.85%
+
+WORST PERFORMANCE:
+  Date: 2025-04-04 13:09:34
+  Portfolio Value: $8,962.86
+  Token Price: 1.61e-06
+  Unrealized P&L: $-1,037.14
+  Return at Trough: -10.37%
+
+RISK ANALYSIS
+---------------
+Portfolio Volatility: 16.13%
+Maximum Loss: $-1,037.14
+Maximum Gain: $5,285.31
+Risk/Reward Ratio: 0.20
+
+MONTHLY PERFORMANCE BREAKDOWN
+-----------------------------------
+  2025-04: 17.51% ($10,000 → $11,751)
+  2025-05: 17.07% ($11,740 → $13,743)
+  2025-06: 8.76% ($13,755 → $14,959)
+
+STRATEGY EFFECTIVENESS
+-------------------------
+Time in Profit: 96.4% of period
+Time in Loss: 3.6% of period
+Strategy Result: ✓ PROFITABLE (+49.59%)
+Recommendation: Short strategy was successful for this token
+
+============================================================
+END OF REPORT
+============================================================
