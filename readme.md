@@ -9,3 +9,5 @@ then run step1_normalizing_dataset.py. It map to find the token ID, and create t
 
 step2:
 run step2_fetch_price.py, it will use an headless browser with playwright to go on coingecko and fetch the price of each asset to ./price_history_tokens, headless browser is necessary to bypass coingecko CORS. The first date of the history fetch, will be the day at which airdrop started.
+
+step3: run strategy_simple_short.py for backtesting
