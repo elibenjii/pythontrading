@@ -8,42 +8,26 @@ from typing import Dict, List, Tuple
 import warnings
 warnings.filterwarnings('ignore')
 
-class CryptoPortfolioHedgeStrategy:
-    def __init__(self, data_folder: str, initial_portfolio: float = 10000, 
-                 investment_per_asset: float = 1000, btc_file_path: str = "./outputs/BTC.json"):
+class CryptoPortfolioShortStrategy:
+    def __init__(self, data_folder: str, initial_portfolio: float = 10000, investment_per_asset: float = 1000):
         """
-        Initialize the crypto portfolio HEDGE strategy (SHORT altcoins + LONG Bitcoin).
+        Initialize the crypto portfolio SHORT strategy with vectorized calculations.
         
         Args:
-            data_folder: Path to folder containing JSON price history files for altcoins
+            data_folder: Path to folder containing JSON price history files
             initial_portfolio: Starting portfolio value
-            investment_per_asset: Amount to invest (short altcoins + long BTC) per asset
-            btc_file_path: Full path to Bitcoin data file (outside data_folder)
+            investment_per_asset: Amount to invest (short) in each asset
         """
         self.data_folder = data_folder
         self.initial_portfolio = initial_portfolio
         self.investment_per_asset = investment_per_asset
-        self.btc_file_path = btc_file_path
         self.assets_data = {}
-        self.btc_data = None
-        self.trades_df = None  # Store all trades in vectorized format
+        self.trades_df = None  # Store all SHORT trades in vectorized format
         
     def load_asset_data(self) -> Dict[str, pd.DataFrame]:
-        """Load altcoin data from data_folder and Bitcoin data from separate file."""
-        print("Loading asset data for HEDGE strategy (SHORT altcoins + LONG BTC)...")
+        """Load all asset data from JSON files."""
+        print("Loading asset data for SHORT strategy...")
         
-        # Load Bitcoin data from separate file
-        print(f"Loading Bitcoin data from: {self.btc_file_path}")
-        with open(self.btc_file_path, 'r') as f:
-            btc_data = json.load(f)
-        
-        btc_df = pd.DataFrame(btc_data['price_data'])
-        btc_df['datetime'] = pd.to_datetime(btc_df['datetime'])
-        btc_df.set_index('datetime', inplace=True)
-        self.btc_data = btc_df[['open', 'high', 'low', 'close', 'volume']].copy()
-        print(f"Loaded BITCOIN (for longs): {len(self.btc_data)} candles")
-        
-        # Load altcoin data from data_folder
         for filename in os.listdir(self.data_folder):
             if filename.endswith('.json'):
                 asset_name = filename.replace('.json', '')
@@ -58,21 +42,18 @@ class CryptoPortfolioHedgeStrategy:
                 price_df = df[['open', 'high', 'low', 'close', 'volume']].copy()
                 
                 self.assets_data[asset_name] = price_df
-                print(f"Loaded {asset_name} (for shorting): {len(price_df)} candles")
-        
-        if not os.path.exists(self.btc_file_path):
-            raise ValueError(f"Bitcoin data file not found at: {self.btc_file_path}")
+                print(f"Loaded {asset_name}: {len(price_df)} candles")
         
         return self.assets_data
     
     def create_trades_dataframe(self):
-        """Create a vectorized trades dataframe instead of manual position tracking."""
-        print("\nCreating vectorized trades dataframe...")
+        """Create a vectorized trades dataframe for all SHORT positions."""
+        print("\nCreating vectorized SHORT trades dataframe...")
         print("=" * 80)
         
         trades_list = []
         
-        # Create SHORT trades for altcoins and corresponding LONG BTC trades
+        # Create SHORT trades for each asset
         for asset_name, price_data in self.assets_data.items():
             entry_date = price_data.index[0]
             exit_date = price_data.index[-1]
@@ -80,7 +61,7 @@ class CryptoPortfolioHedgeStrategy:
             exit_price = price_data['close'].iloc[-1]
             tokens_shorted = self.investment_per_asset / entry_price
             
-            # SHORT altcoin trade
+            # SHORT P&L: profit when price goes DOWN
             short_pnl = (entry_price - exit_price) * tokens_shorted
             short_return_pct = (short_pnl / self.investment_per_asset) * 100
             
@@ -96,49 +77,12 @@ class CryptoPortfolioHedgeStrategy:
                 'investment': self.investment_per_asset,
                 'pnl': short_pnl,
                 'return_pct': short_return_pct,
-                'side': -1  # Short = -1
+                'side': -1,  # Short = -1
+                'cash_received': self.investment_per_asset  # Cash from short sale
             })
             
-            # Find corresponding BTC price for LONG trade
-            if entry_date in self.btc_data.index:
-                btc_entry_price = self.btc_data.loc[entry_date, 'close']
-                btc_entry_date = entry_date
-            else:
-                available_btc_dates = self.btc_data.index
-                btc_entry_date = min(available_btc_dates, key=lambda x: abs(x - entry_date))
-                btc_entry_price = self.btc_data.loc[btc_entry_date, 'close']
-            
-            if exit_date in self.btc_data.index:
-                btc_exit_price = self.btc_data.loc[exit_date, 'close']
-                btc_exit_date = exit_date
-            else:
-                available_btc_dates = self.btc_data.index
-                btc_exit_date = min(available_btc_dates, key=lambda x: abs(x - exit_date))
-                btc_exit_price = self.btc_data.loc[btc_exit_date, 'close']
-            
-            btc_tokens_bought = self.investment_per_asset / btc_entry_price
-            btc_pnl = (btc_exit_price - btc_entry_price) * btc_tokens_bought
-            btc_return_pct = (btc_pnl / self.investment_per_asset) * 100
-            
-            # LONG BTC trade
-            trades_list.append({
-                'trade_id': f"LONG_BTC_for_{asset_name}",
-                'asset': 'BTC',
-                'trade_type': 'LONG',
-                'entry_date': btc_entry_date,
-                'exit_date': btc_exit_date,
-                'entry_price': btc_entry_price,
-                'exit_price': btc_exit_price,
-                'quantity': btc_tokens_bought,
-                'investment': self.investment_per_asset,
-                'pnl': btc_pnl,
-                'return_pct': btc_return_pct,
-                'side': 1,  # Long = 1
-                'altcoin_pair': asset_name
-            })
-            
-            print(f"{asset_name:12} SHORT: {tokens_shorted:.6f} tokens @ ${entry_price:.4f} -> ${exit_price:.4f} | PNL: ${short_pnl:.2f}")
-            print(f"{'BTC HEDGE':12} LONG:  {btc_tokens_bought:.8f} BTC @ ${btc_entry_price:.2f} -> ${btc_exit_price:.2f} | PNL: ${btc_pnl:.2f}")
+            print(f"{asset_name:12} SHORT: {tokens_shorted:.6f} tokens @ ${entry_price:.4f} -> ${exit_price:.4f}")
+            print(f"{'':12} Cash received: ${self.investment_per_asset:.2f} | Final PNL: ${short_pnl:.2f} ({short_return_pct:.1f}%)")
             print("-" * 80)
         
         self.trades_df = pd.DataFrame(trades_list)
@@ -146,26 +90,22 @@ class CryptoPortfolioHedgeStrategy:
     
     def calculate_portfolio_value_timeline_vectorized(self) -> pd.DataFrame:
         """Calculate portfolio value timeline using vectorized operations."""
-        print("\nCalculating HEDGE portfolio timeline (vectorized)...")
+        print("\nCalculating SHORT portfolio timeline (vectorized)...")
         
-        # Get all unique dates from both altcoins and BTC
+        # Get all unique dates
         all_dates = set()
         for asset_data in self.assets_data.values():
             all_dates.update(asset_data.index)
-        all_dates.update(self.btc_data.index)
         all_dates = sorted(list(all_dates))
         
-        # Create a master price DataFrame with all assets
+        # Create master price DataFrame with all assets
         price_df = pd.DataFrame(index=all_dates)
         
-        # Add altcoin prices
+        # Add all asset prices with forward fill for missing dates
         for asset_name, asset_data in self.assets_data.items():
             price_df[f"{asset_name}_price"] = asset_data['close'].reindex(all_dates, method='ffill')
         
-        # Add BTC price
-        price_df['BTC_price'] = self.btc_data['close'].reindex(all_dates, method='ffill')
-        
-        # Calculate PNL for each trade at each date using vectorized operations
+        # Calculate PNL for each SHORT trade at each date using vectorization
         pnl_df = pd.DataFrame(index=all_dates)
         
         for _, trade in self.trades_df.iterrows():
@@ -174,29 +114,21 @@ class CryptoPortfolioHedgeStrategy:
             entry_date = trade['entry_date']
             entry_price = trade['entry_price']
             quantity = trade['quantity']
-            side = trade['side']
             
-            # Get price column name
-            if asset == 'BTC':
-                price_col = 'BTC_price'
-            else:
-                price_col = f"{asset}_price"
+            price_col = f"{asset}_price"
             
-            # Calculate PNL vectorized: (current_price - entry_price) * quantity * side
-            # For SHORT: side = -1, so profit when price goes down
-            # For LONG: side = 1, so profit when price goes up
+            # Vectorized SHORT PNL: (entry_price - current_price) * quantity
+            # Profit when current_price < entry_price (price went down)
             mask = price_df.index >= entry_date
-            pnl_df.loc[mask, trade_id] = (price_df.loc[mask, price_col] - entry_price) * quantity * side
+            pnl_df.loc[mask, trade_id] = (entry_price - price_df.loc[mask, price_col]) * quantity
             pnl_df.loc[~mask, trade_id] = 0  # No PNL before entry
         
         # Fill NaN values with 0
         pnl_df = pnl_df.fillna(0)
         
-        # Calculate totals using vectorized sum
+        # Calculate portfolio timeline using vectorized sum
         portfolio_timeline = pd.DataFrame(index=all_dates)
-        portfolio_timeline['Short_PNL'] = pnl_df[[col for col in pnl_df.columns if 'SHORT' in col]].sum(axis=1)
-        portfolio_timeline['Long_PNL'] = pnl_df[[col for col in pnl_df.columns if 'LONG' in col]].sum(axis=1)
-        portfolio_timeline['Total_PNL'] = portfolio_timeline['Short_PNL'] + portfolio_timeline['Long_PNL']
+        portfolio_timeline['Total_PNL'] = pnl_df.sum(axis=1)  # Sum all SHORT PNLs
         portfolio_timeline['Portfolio_Value'] = self.initial_portfolio + portfolio_timeline['Total_PNL']
         
         # Calculate daily returns for metrics calculation
@@ -212,7 +144,7 @@ class CryptoPortfolioHedgeStrategy:
     def calculate_trading_bot_metrics(self, timeline_df: pd.DataFrame) -> Dict:
         """Calculate comprehensive trading bot metrics."""
         print(f"\n{'='*90}")
-        print("TRADING BOT PERFORMANCE METRICS - HEDGE STRATEGY")
+        print("TRADING BOT PERFORMANCE METRICS")
         print(f"{'='*90}")
         
         # Basic returns
@@ -301,7 +233,7 @@ class CryptoPortfolioHedgeStrategy:
         }
         
         # Print metrics
-        print("📊 KEY HEDGE STRATEGY TRADING BOT METRICS:")
+        print("📊 KEY TRADING BOT METRICS:")
         print("-" * 50)
         print(f"Total Return: {total_return:.2f}%")
         print(f"Annualized Return: {annualized_return:.2f}%")
@@ -319,110 +251,122 @@ class CryptoPortfolioHedgeStrategy:
         return metrics
     
     def calculate_trade_based_metrics(self):
-        """Calculate metrics based on individual trades (as requested in the comment)."""
+        """Calculate metrics based on individual SHORT trades."""
         print(f"\n{'='*90}")
-        print("TRADE-BASED PERFORMANCE ANALYSIS (Individual Trade Returns)")
+        print("TRADE-BASED SHORT PERFORMANCE ANALYSIS")
         print(f"{'='*90}")
         
-        # Group trades by type
-        short_trades = self.trades_df[self.trades_df['trade_type'] == 'SHORT'].copy()
-        long_trades = self.trades_df[self.trades_df['trade_type'] == 'LONG'].copy()
-        
         # Calculate trade statistics using vectorized operations
-        short_stats = {
-            'total_trades': len(short_trades),
-            'winning_trades': (short_trades['pnl'] > 0).sum(),
-            'losing_trades': (short_trades['pnl'] <= 0).sum(),
-            'win_rate': (short_trades['pnl'] > 0).mean() * 100,
-            'total_pnl': short_trades['pnl'].sum(),
-            'avg_win': short_trades[short_trades['pnl'] > 0]['pnl'].mean() if (short_trades['pnl'] > 0).any() else 0,
-            'avg_loss': short_trades[short_trades['pnl'] <= 0]['pnl'].mean() if (short_trades['pnl'] <= 0).any() else 0,
-            'best_trade': short_trades['pnl'].max(),
-            'worst_trade': short_trades['pnl'].min(),
-            'avg_return_pct': short_trades['return_pct'].mean(),
-            'total_investment': short_trades['investment'].sum()
-        }
-        
-        long_stats = {
-            'total_trades': len(long_trades),
-            'winning_trades': (long_trades['pnl'] > 0).sum(),
-            'losing_trades': (long_trades['pnl'] <= 0).sum(),
-            'win_rate': (long_trades['pnl'] > 0).mean() * 100,
-            'total_pnl': long_trades['pnl'].sum(),
-            'avg_win': long_trades[long_trades['pnl'] > 0]['pnl'].mean() if (long_trades['pnl'] > 0).any() else 0,
-            'avg_loss': long_trades[long_trades['pnl'] <= 0]['pnl'].mean() if (long_trades['pnl'] <= 0).any() else 0,
-            'best_trade': long_trades['pnl'].max(),
-            'worst_trade': long_trades['pnl'].min(),
-            'avg_return_pct': long_trades['return_pct'].mean(),
-            'total_investment': long_trades['investment'].sum()
-        }
-        
-        # Print trade-based analysis
-        print("SHORT ALTCOIN TRADES:")
-        print("-" * 50)
-        print(f"Total Trades: {short_stats['total_trades']}")
-        print(f"Winning Trades: {short_stats['winning_trades']} ({short_stats['win_rate']:.1f}%)")
-        print(f"Losing Trades: {short_stats['losing_trades']}")
-        print(f"Total PNL: ${short_stats['total_pnl']:,.2f}")
-        print(f"Average Win: ${short_stats['avg_win']:,.2f}")
-        print(f"Average Loss: ${short_stats['avg_loss']:,.2f}")
-        print(f"Best Trade: ${short_stats['best_trade']:,.2f}")
-        print(f"Worst Trade: ${short_stats['worst_trade']:,.2f}")
-        print(f"Average Return per Trade: {short_stats['avg_return_pct']:.2f}%")
-        
-        print("\nLONG BITCOIN TRADES:")
-        print("-" * 50)
-        print(f"Total Trades: {long_stats['total_trades']}")
-        print(f"Winning Trades: {long_stats['winning_trades']} ({long_stats['win_rate']:.1f}%)")
-        print(f"Losing Trades: {long_stats['losing_trades']}")
-        print(f"Total PNL: ${long_stats['total_pnl']:,.2f}")
-        print(f"Average Win: ${long_stats['avg_win']:,.2f}")
-        print(f"Average Loss: ${long_stats['avg_loss']:,.2f}")
-        print(f"Best Trade: ${long_stats['best_trade']:,.2f}")
-        print(f"Worst Trade: ${long_stats['worst_trade']:,.2f}")
-        print(f"Average Return per Trade: {long_stats['avg_return_pct']:.2f}%")
-        
-        # Combined statistics
         total_trades = len(self.trades_df)
+        winning_trades = (self.trades_df['pnl'] > 0).sum()
+        losing_trades = (self.trades_df['pnl'] <= 0).sum()
+        win_rate = (self.trades_df['pnl'] > 0).mean() * 100
+        
         total_pnl = self.trades_df['pnl'].sum()
         total_investment = self.trades_df['investment'].sum()
-        overall_return_pct = (total_pnl / total_investment) * 100
+        avg_return_per_trade = self.trades_df['return_pct'].mean()
         
-        print("\nCOMBINED HEDGE PERFORMANCE:")
+        # Winning and losing trade statistics
+        winning_mask = self.trades_df['pnl'] > 0
+        losing_mask = self.trades_df['pnl'] <= 0
+        
+        avg_win = self.trades_df[winning_mask]['pnl'].mean() if winning_trades > 0 else 0
+        avg_loss = self.trades_df[losing_mask]['pnl'].mean() if losing_trades > 0 else 0
+        best_trade = self.trades_df['pnl'].max()
+        worst_trade = self.trades_df['pnl'].min()
+        
+        # Risk metrics
+        total_cash_received = self.trades_df['cash_received'].sum()
+        overall_return_pct = (total_pnl / total_investment) * 100
+        profit_factor = abs(avg_win * winning_trades) / abs(avg_loss * losing_trades) if losing_trades > 0 else float('inf')
+        
+        print("SHORT TRADES PERFORMANCE:")
         print("-" * 50)
         print(f"Total Trades: {total_trades}")
+        print(f"Winning Trades: {winning_trades} ({win_rate:.1f}%)")
+        print(f"Losing Trades: {losing_trades}")
+        print(f"Win Rate: {win_rate:.1f}%")
+        print(f"")
         print(f"Total Investment: ${total_investment:,.2f}")
+        print(f"Total Cash Received: ${total_cash_received:,.2f}")
         print(f"Total PNL: ${total_pnl:,.2f}")
         print(f"Overall Return: {overall_return_pct:.2f}%")
-        print(f"Profit Factor: {abs(short_stats['total_pnl'] + long_stats['total_pnl']) / total_investment:.2f}")
+        print(f"Average Return per Trade: {avg_return_per_trade:.2f}%")
+        print(f"")
+        print(f"Best Trade: ${best_trade:,.2f}")
+        print(f"Worst Trade: ${worst_trade:,.2f}")
+        print(f"Average Win: ${avg_win:,.2f}")
+        print(f"Average Loss: ${avg_loss:,.2f}")
+        print(f"Profit Factor: {profit_factor:.2f}")
+        
+        # Price movement analysis
+        print(f"\nPRICE MOVEMENT ANALYSIS:")
+        print("-" * 50)
+        
+        # Calculate price changes vectorized
+        self.trades_df['price_change_pct'] = ((self.trades_df['exit_price'] - self.trades_df['entry_price']) / self.trades_df['entry_price']) * 100
+        self.trades_df['price_direction'] = self.trades_df['price_change_pct'].apply(lambda x: 'DOWN' if x < 0 else 'UP' if x > 0 else 'FLAT')
+        
+        price_down_count = (self.trades_df['price_change_pct'] < 0).sum()
+        price_up_count = (self.trades_df['price_change_pct'] > 0).sum()
+        avg_price_change = self.trades_df['price_change_pct'].mean()
+        
+        print(f"Assets that went DOWN: {price_down_count} ({(price_down_count/total_trades)*100:.1f}%)")
+        print(f"Assets that went UP: {price_up_count} ({(price_up_count/total_trades)*100:.1f}%)")
+        print(f"Average Price Change: {avg_price_change:.2f}%")
         
         return {
-            'short_stats': short_stats,
-            'long_stats': long_stats,
+            'total_trades': total_trades,
+            'winning_trades': winning_trades,
+            'losing_trades': losing_trades,
+            'win_rate': win_rate,
             'total_pnl': total_pnl,
             'total_investment': total_investment,
-            'overall_return_pct': overall_return_pct
+            'overall_return_pct': overall_return_pct,
+            'avg_return_per_trade': avg_return_per_trade,
+            'best_trade': best_trade,
+            'worst_trade': worst_trade,
+            'profit_factor': profit_factor,
+            'price_down_count': price_down_count,
+            'avg_price_change': avg_price_change
         }
     
     def create_individual_trades_analysis(self):
-        """Display individual trade performance."""
+        """Display individual SHORT trade performance with vectorized sorting."""
         print(f"\n{'='*120}")
-        print("INDIVIDUAL TRADES PERFORMANCE (Trade-by-Trade Basis)")
+        print("INDIVIDUAL SHORT TRADES PERFORMANCE")
         print(f"{'='*120}")
         
-        # Sort trades by PNL descending
+        # Sort trades by PNL descending using vectorized operations
         sorted_trades = self.trades_df.sort_values('pnl', ascending=False)
         
-        print(f"{'TRADE ID':<25} {'TYPE':<6} {'ASSET':<8} {'ENTRY $':<10} {'EXIT $':<10} {'QTY':<12} {'PNL $':<12} {'RETURN %':<10}")
+        print(f"{'TRADE ID':<20} {'ASSET':<10} {'ENTRY $':<10} {'EXIT $':<10} {'QTY':<12} {'PRICE Δ%':<10} {'PNL $':<12} {'RETURN %':<10}")
         print("-" * 120)
         
         for _, trade in sorted_trades.iterrows():
-            print(f"{trade['trade_id']:<25} {trade['trade_type']:<6} {trade['asset']:<8} "
-                  f"{trade['entry_price']:<10.4f} {trade['exit_price']:<10.4f} {trade['quantity']:<12.6f} "
+            price_change = ((trade['exit_price'] - trade['entry_price']) / trade['entry_price']) * 100
+            print(f"{trade['trade_id']:<20} {trade['asset']:<10} {trade['entry_price']:<10.4f} "
+                  f"{trade['exit_price']:<10.4f} {trade['quantity']:<12.6f} {price_change:<10.1f} "
                   f"{trade['pnl']:<12.2f} {trade['return_pct']:<10.2f}")
+        
+        # Summary statistics
+        profitable_trades = sorted_trades[sorted_trades['pnl'] > 0]
+        losing_trades = sorted_trades[sorted_trades['pnl'] <= 0]
+        
+        if len(profitable_trades) > 0:
+            print(f"\n🟢 TOP 3 PROFITABLE SHORTS (Price went DOWN):")
+            for _, trade in profitable_trades.head(3).iterrows():
+                price_drop = ((trade['entry_price'] - trade['exit_price']) / trade['entry_price']) * 100
+                print(f"   {trade['asset']}: Price dropped {price_drop:.1f}% → Profit ${trade['pnl']:.2f}")
+        
+        if len(losing_trades) > 0:
+            print(f"\n🔴 TOP 3 LOSING SHORTS (Price went UP):")
+            for _, trade in losing_trades.tail(3).iterrows():
+                price_rise = ((trade['exit_price'] - trade['entry_price']) / trade['entry_price']) * 100
+                print(f"   {trade['asset']}: Price rose {price_rise:.1f}% → Loss ${trade['pnl']:.2f}")
     
-    def create_enhanced_hedge_trading_bot_chart(self, timeline_df: pd.DataFrame, bot_metrics: Dict):
-        """Create enhanced HEDGE PNL chart with trading bot metrics displayed."""
+    def create_enhanced_trading_bot_chart(self, timeline_df: pd.DataFrame, bot_metrics: Dict):
+        """Create enhanced PNL chart with trading bot metrics displayed."""
         os.makedirs("./outputs", exist_ok=True)
         
         # Create figure with subplots
@@ -431,15 +375,9 @@ class CryptoPortfolioHedgeStrategy:
         # Main PNL chart (top 70% of figure)
         ax1 = plt.subplot2grid((4, 3), (0, 0), colspan=3, rowspan=3)
         
-        # Main combined PNL
+        # Main PNL line
         ax1.plot(timeline_df.index, timeline_df['Total_PNL'], 
-                linewidth=4, color='purple', label='COMBINED HEDGE PNL', alpha=0.9)
-        
-        # Individual components
-        ax1.plot(timeline_df.index, timeline_df['Short_PNL'], 
-                linewidth=2, color='red', label='SHORT Altcoins PNL', alpha=0.7, linestyle='--')
-        ax1.plot(timeline_df.index, timeline_df['Long_PNL'], 
-                linewidth=2, color='green', label='LONG Bitcoin PNL', alpha=0.7, linestyle='--')
+                linewidth=4, color='purple', label='SHORT Strategy Total PNL', alpha=0.9)
         
         # Break even line
         ax1.axhline(y=0, color='blue', linestyle='--', alpha=0.7, linewidth=2, label='Break Even')
@@ -454,50 +392,56 @@ class CryptoPortfolioHedgeStrategy:
                         timeline_df['Total_PNL'] - drawdown_dollars, 
                         where=(drawdown_dollars < 0), color='red', alpha=0.2, label='Drawdown')
         
-        # Add entry markers with individual token labels
-        entry_positions = []  # Store positions to avoid overlapping labels
-        
-        for asset_name, asset_data in self.assets_data.items():
-            entry_date = asset_data.index[0]
+        # === MODIFICATION START ===
+        # Add individual trade entry markers and labels
+        plotted_legend_entry = False
+        for _, trade in self.trades_df.iterrows():
+            entry_date = trade['entry_date']
+            asset_name = trade['asset']
+
+            # Find the corresponding PNL at the entry date
+            # Handle cases where the exact entry date might not be in the timeline index
             if entry_date in timeline_df.index:
                 entry_pnl = timeline_df.loc[entry_date, 'Total_PNL']
             else:
-                closest_date = min(timeline_df.index, key=lambda x: abs(x - entry_date))
+                # Find the closest date available in the index if exact match not found
+                closest_date_index = timeline_df.index.get_loc(entry_date, method='nearest')
+                closest_date = timeline_df.index[closest_date_index]
                 entry_pnl = timeline_df.loc[closest_date, 'Total_PNL']
-            
-            # Add marker for each position entry
-            ax1.scatter(entry_date, entry_pnl, color='orange', s=120, 
-                       marker='o', zorder=5, edgecolors='black', linewidth=2)
-            
-            # Calculate label offset to avoid overlaps
-            offset_y = 30
-            offset_x = 10
-            
-            # Check for overlapping positions and adjust offset
-            for prev_date, prev_pnl in entry_positions:
-                if abs((entry_date - prev_date).days) < 7:  # If entries are within 7 days
-                    offset_y += 40  # Stack labels vertically
-                    offset_x = -offset_x  # Alternate sides
-            
-            entry_positions.append((entry_date, entry_pnl))
-            
-            # Add individual token label showing both SHORT + LONG BTC
-            ax1.annotate(f'SHORT {asset_name.upper()}\n+ LONG BTC', 
-                        (entry_date, entry_pnl), 
-                        xytext=(offset_x, offset_y), textcoords='offset points', 
-                        fontsize=9, fontweight='bold', color='darkred',
-                        bbox=dict(boxstyle='round,pad=0.3', facecolor='lightyellow', 
-                                alpha=0.9, edgecolor='orange'),
-                        arrowprops=dict(arrowstyle='->', color='orange', lw=1.5),
-                        ha='center')
+
+            # Add a downward triangle marker for the short entry
+            # Use a flag to add the legend entry only once to avoid clutter
+            label = 'Short Entry' if not plotted_legend_entry else None
+            ax1.scatter(entry_date, entry_pnl, color='orange', s=120,
+                       marker='o', zorder=5, edgecolors='black', linewidth=2, label=label)
+
+
+
+            if not plotted_legend_entry:
+                plotted_legend_entry = True
+
+
+            # Add text label (annotation) with the asset name
+            ax1.annotate(asset_name,
+                         xy=(entry_date, entry_pnl), # Point to annotate
+                         xytext=(0, 10), # Offset the text 10 points vertically above the marker
+                         textcoords='offset points',
+                         ha='center',
+                         fontsize=9,
+                         fontweight='bold',
+                         color='darkred',
+                          arrowprops=dict(arrowstyle='->', color='orange', lw=1.5),
+                         bbox=dict(boxstyle='round,pad=0.3', facecolor='lightyellow', 
+                                alpha=0.9, edgecolor='orange'))
+        # === MODIFICATION END ===
         
-        # Color fill for combined PNL
+        # Color fill areas
         ax1.fill_between(timeline_df.index, timeline_df['Total_PNL'], 0, 
                         where=(timeline_df['Total_PNL'] >= 0), color='green', alpha=0.3, label='Profit Zone')
         ax1.fill_between(timeline_df.index, timeline_df['Total_PNL'], 0, 
                         where=(timeline_df['Total_PNL'] < 0), color='red', alpha=0.3, label='Loss Zone')
         
-        ax1.set_title('TRADING BOT: HEDGE Strategy Performance with Key Metrics\n(SHORT Altcoins + LONG Bitcoin)', 
+        ax1.set_title('TRADING BOT: SHORT Strategy Performance with Key Metrics\n(Vectorized Calculation)', 
                      fontsize=18, fontweight='bold', pad=20)
         ax1.set_xlabel('Date', fontsize=12)
         ax1.set_ylabel('Cumulative PNL ($)', fontsize=12)
@@ -569,15 +513,14 @@ class CryptoPortfolioHedgeStrategy:
         # Save the chart
         chart_filename = "./outputs/strategy_simple_short.png"
         plt.savefig(chart_filename, dpi=300, bbox_inches='tight', facecolor='white')
-        print(f"📊 Enhanced Hedge Strategy Trading Bot Chart saved to: {chart_filename}")
+        print(f"📊 Enhanced Trading Bot Chart saved to: {chart_filename}")
         
         # Print strategy summary
         final_pnl = timeline_df['Total_PNL'].iloc[-1]
         total_investment = len(self.trades_df) * self.investment_per_asset
-        short_trades_count = len(self.trades_df[self.trades_df['trade_type'] == 'SHORT'])
         
-        print("\n📍 HEDGE STRATEGY TRADING BOT SUMMARY:")
-        print(f"  • Strategy: SHORT {short_trades_count} altcoins + LONG {short_trades_count} BTC positions @ ${self.investment_per_asset:,} each")
+        print("\n📍 TRADING BOT SUMMARY:")
+        print(f"  • Strategy: SHORT {len(self.trades_df)} assets @ ${self.investment_per_asset:,} each")
         print(f"  • Total Capital: ${total_investment:,}")
         print(f"  • Net P&L: ${final_pnl:,.2f}")
         print(f"  • ROI: {(final_pnl/self.initial_portfolio)*100:.2f}%")
@@ -587,90 +530,11 @@ class CryptoPortfolioHedgeStrategy:
         plt.show()
         return fig
     
-    def create_combined_pnl_chart(self, timeline_df: pd.DataFrame):
-        """Create combined PNL chart showing SHORT + LONG performance."""
-        os.makedirs("./outputs", exist_ok=True)
-        
-        plt.figure(figsize=(16, 10))
-        
-        # Main combined PNL
-        plt.plot(timeline_df.index, timeline_df['Total_PNL'], 
-                linewidth=4, color='purple', label='COMBINED HEDGE PNL', alpha=0.9)
-        
-        # Individual components
-        plt.plot(timeline_df.index, timeline_df['Short_PNL'], 
-                linewidth=2, color='red', label='SHORT Altcoins PNL', alpha=0.7, linestyle='--')
-        plt.plot(timeline_df.index, timeline_df['Long_PNL'], 
-                linewidth=2, color='green', label='LONG Bitcoin PNL', alpha=0.7, linestyle='--')
-        
-        # Break even line
-        plt.axhline(y=0, color='blue', linestyle='-', alpha=0.5, label='Break Even')
-        
-        # Add entry markers with individual token labels
-        entry_positions = []  # Store positions to avoid overlapping labels
-        
-        for asset_name, asset_data in self.assets_data.items():
-            entry_date = asset_data.index[0]
-            if entry_date in timeline_df.index:
-                entry_pnl = timeline_df.loc[entry_date, 'Total_PNL']
-            else:
-                closest_date = min(timeline_df.index, key=lambda x: abs(x - entry_date))
-                entry_pnl = timeline_df.loc[closest_date, 'Total_PNL']
-            
-            # Add marker for each position entry
-            plt.scatter(entry_date, entry_pnl, color='orange', s=120, 
-                       marker='o', zorder=5, edgecolors='black', linewidth=2)
-            
-            # Calculate label offset to avoid overlaps
-            offset_y = 30
-            offset_x = 10
-            
-            # Check for overlapping positions and adjust offset
-            for prev_date, prev_pnl in entry_positions:
-                if abs((entry_date - prev_date).days) < 7:  # If entries are within 7 days
-                    offset_y += 40  # Stack labels vertically
-                    offset_x = -offset_x  # Alternate sides
-            
-            entry_positions.append((entry_date, entry_pnl))
-            
-            # Add individual token label showing both SHORT + LONG BTC
-            plt.annotate(f'SHORT {asset_name.upper()}\n+ LONG BTC', 
-                        (entry_date, entry_pnl), 
-                        xytext=(offset_x, offset_y), textcoords='offset points', 
-                        fontsize=9, fontweight='bold', color='darkred',
-                        bbox=dict(boxstyle='round,pad=0.3', facecolor='lightyellow', 
-                                alpha=0.9, edgecolor='orange'),
-                        arrowprops=dict(arrowstyle='->', color='orange', lw=1.5),
-                        ha='center')
-        
-        plt.title('HEDGE STRATEGY: Vectorized Performance Analysis (Trade-Based Calculations)', 
-                 fontsize=18, fontweight='bold', pad=20)
-        plt.xlabel('Date', fontsize=14)
-        plt.ylabel('Cumulative PNL ($)', fontsize=14)
-        plt.grid(True, alpha=0.3)
-        plt.legend(fontsize=12, loc='best')
-        plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-        
-        # Color fill for combined PNL
-        plt.fill_between(timeline_df.index, timeline_df['Total_PNL'], 0, 
-                        where=(timeline_df['Total_PNL'] >= 0), color='green', alpha=0.2)
-        plt.fill_between(timeline_df.index, timeline_df['Total_PNL'], 0, 
-                        where=(timeline_df['Total_PNL'] < 0), color='red', alpha=0.2)
-        
-        plt.tight_layout()
-        
-        # Save the chart
-        chart_filename = "./outputs/vectorized_hedge_strategy_pnl.png"
-        plt.savefig(chart_filename, dpi=300, bbox_inches='tight', facecolor='white')
-        print(f"📊 Vectorized Hedge Strategy Chart saved to: {chart_filename}")
-        
-        plt.show()
-    
-    def run_hedge_strategy(self):
-        """Run the complete HEDGE trading strategy with vectorized calculations and enhanced metrics."""
-        print("Starting Enhanced Crypto Portfolio HEDGE Strategy with Trading Bot Metrics")
+    def run_short_strategy(self):
+        """Run the complete vectorized SHORT trading strategy with enhanced metrics."""
+        print("Starting Enhanced Crypto Portfolio SHORT Strategy with Trading Bot Metrics")
         print("=" * 90)
-        print("🔄 HEDGE STRATEGY: SHORT Altcoins + LONG Bitcoin (VECTORIZED)")
+        print("📉 SHORT STRATEGY: Profit when crypto prices go DOWN (VECTORIZED)")
         print("📊 Enhanced with comprehensive trading bot performance metrics")
         print("⚡ Optimized with pandas vectorization")
         print("=" * 90)
@@ -688,23 +552,20 @@ class CryptoPortfolioHedgeStrategy:
         # Calculate trade-based metrics
         trade_metrics = self.calculate_trade_based_metrics()
         
-        # Show individual trades
+        # Show individual trades analysis
         self.create_individual_trades_analysis()
         
-        # Create enhanced trading bot chart with metrics table
-        self.create_enhanced_hedge_trading_bot_chart(timeline_df, bot_metrics)
+        # Create enhanced trading bot chart with metrics
+        self.create_enhanced_trading_bot_chart(timeline_df, bot_metrics)
         
         return timeline_df, bot_metrics, trade_metrics, self.trades_df
 
 # Usage
 if __name__ == "__main__":
-    strategy = CryptoPortfolioHedgeStrategy(
+    strategy = CryptoPortfolioShortStrategy(
         data_folder="./outputs/prices_history",
         initial_portfolio=10000,
-        investment_per_asset=1000,
-        btc_file_path="./outputs/BTC.json"
+        investment_per_asset=1000
     )
     
-    timeline_df, bot_metrics, trade_metrics, trades_df = strategy.run_hedge_strategy()
-    
-   
+    timeline_df, bot_metrics, trade_metrics, trades_df = strategy.run_short_strategy()
