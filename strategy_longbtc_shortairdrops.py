@@ -567,7 +567,7 @@ class CryptoPortfolioHedgeStrategy:
         plt.tight_layout()
         
         # Save the chart
-        chart_filename = "./outputs/strategy_simple_short.png"
+        chart_filename = "./outputs/strategy_longbtc_shortairdrops.png"
         plt.savefig(chart_filename, dpi=300, bbox_inches='tight', facecolor='white')
         print(f"📊 Enhanced Hedge Strategy Trading Bot Chart saved to: {chart_filename}")
         
@@ -707,4 +707,3 @@ if __name__ == "__main__":
     
     timeline_df, bot_metrics, trade_metrics, trades_df = strategy.run_hedge_strategy()
     
-   

@@ -1,5 +1,5 @@
-playwright>=1.40.0
 pandas>=1.5.0
 numpy>=1.24.0
 vectorbt>=0.25.0
 matplotlib>=3.6.0
+ccxt>=4.0.0

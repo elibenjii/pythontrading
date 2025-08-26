@@ -1,0 +1,389 @@
+[
+  {
+    "airdropId": 237,
+    "airdropAsset": "IOST",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/images/20191211/ac3c4be1-e585-4923-bd1d-d8e19a8c4a6c.png",
+    "airdropAssetFullName": "IOST",
+    "snapshotAssets": [
+      {
+        "asset": "IOST",
+        "icon": "https://bin.bnbstatic.com/images/20191211/ac3c4be1-e585-4923-bd1d-d8e19a8c4a6c.png"
+      }
+    ],
+    "airdropPeriodStart": 1743465600000,
+    "airdropPeriodEnd": 1869695999000,
+    "snapshotTimes": [
+      1741996800000
+    ],
+    "airdropStatus": "ON_GOING",
+    "link": "https://medium.com/iost/airdrop-announcement-for-supported-exchanges-f15a57e59929",
+    "linkRelative": "https://medium.com/iost/airdrop-announcement-for-supported-exchanges-f15a57e59929",
+    "distributed": false,
+    "topFlag": true,
+    "futuresSymbol": "IOSTUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 6,
+    "futuresQuantityPrecision": 0,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1569398400000
+  },
+  {
+    "airdropId": 229,
+    "airdropAsset": "PENGU",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20241216/bc24be66-84af-4277-b8fe-528bc821c20c.png",
+    "airdropAssetFullName": "Pudgy Penguins",
+    "snapshotAssets": [
+      {
+        "asset": "PENGU",
+        "icon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20241216/bc24be66-84af-4277-b8fe-528bc821c20c.png"
+      }
+    ],
+    "airdropPeriodStart": 1734652800000,
+    "airdropPeriodEnd": 1734825599000,
+    "snapshotTimes": [
+      1734444000000,
+      1734446220000
+    ],
+    "airdropStatus": "COMPLETED",
+    "link": "https://www.binance.com/en/support/announcement/updates-on-pudgy-penguins-pengu-token-information-d2942143c5e342dc9490eeeca9b75343",
+    "linkRelative": "/support/announcement/updates-on-pudgy-penguins-pengu-token-information-d2942143c5e342dc9490eeeca9b75343",
+    "distributed": false,
+    "topFlag": true,
+    "futuresSymbol": "PENGUUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 7,
+    "futuresQuantityPrecision": 0,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1734452100000
+  },
+  {
+    "airdropId": 220,
+    "airdropAsset": "HMSTR",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20240926/8780da90-2a87-4f59-8839-d77c99dcf0cf.png",
+    "airdropAssetFullName": "Hamster Kombat",
+    "snapshotAssets": [
+      {
+        "asset": "HMSTR",
+        "icon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20240926/8780da90-2a87-4f59-8839-d77c99dcf0cf.png"
+      }
+    ],
+    "airdropPeriodStart": null,
+    "airdropPeriodEnd": null,
+    "snapshotTimes": [],
+    "airdropStatus": "COMPLETED",
+    "link": "https://www.binance.com/en/support/announcement/4ff1ed79c8e44acfba1d8f4e5a23dd64",
+    "linkRelative": "/support/announcement/4ff1ed79c8e44acfba1d8f4e5a23dd64",
+    "distributed": false,
+    "topFlag": true,
+    "futuresSymbol": "HMSTRUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 7,
+    "futuresQuantityPrecision": 0,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1727353800000
+  },
+  {
+    "airdropId": 217,
+    "airdropAsset": "CATI",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20240925/436053ad-bd56-490b-aacc-bd15be9186e3.png",
+    "airdropAssetFullName": "Catizen",
+    "snapshotAssets": [
+      {
+        "asset": "CATI",
+        "icon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20240925/436053ad-bd56-490b-aacc-bd15be9186e3.png"
+      }
+    ],
+    "airdropPeriodStart": 1726790400000,
+    "airdropPeriodEnd": 1726876799000,
+    "snapshotTimes": [
+      1726617600000
+    ],
+    "airdropStatus": "COMPLETED",
+    "link": "https://www.binance.com/en/support/announcement/03b4921a44644da2880a290c0e254140",
+    "linkRelative": "/support/announcement/03b4921a44644da2880a290c0e254140",
+    "distributed": false,
+    "topFlag": true,
+    "futuresSymbol": "CATIUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 7,
+    "futuresQuantityPrecision": 0,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1726831800000
+  },
+  {
+    "airdropId": 211,
+    "airdropAsset": "DOGS",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20240821/2e948a93-a01a-43c9-a7df-367451026854.png",
+    "airdropAssetFullName": "Dogs",
+    "snapshotAssets": [
+      {
+        "asset": "DOGS",
+        "icon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20240821/2e948a93-a01a-43c9-a7df-367451026854.png"
+      }
+    ],
+    "airdropPeriodStart": 1724630400000,
+    "airdropPeriodEnd": 1724889599000,
+    "snapshotTimes": [],
+    "airdropStatus": "COMPLETED",
+    "link": "https://www.binance.com/en/support/announcement/fc967d5825774984829b96943a42fadf?utm_source=AnnouncementTG&utm_medium=GlobalCommunity&utm_campaign=AnnouncementBot",
+    "linkRelative": "/support/announcement/fc967d5825774984829b96943a42fadf?utm_source=AnnouncementTG&utm_medium=GlobalCommunity&utm_campaign=AnnouncementBot",
+    "distributed": false,
+    "topFlag": true,
+    "futuresSymbol": "DOGSUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 7,
+    "futuresQuantityPrecision": 0,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1724675400000
+  },
+  {
+    "airdropId": 196,
+    "airdropAsset": "PIXEL",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20240221/a400e124-6c71-4eb9-9aa0-a37b1fb7cbf3.png",
+    "airdropAssetFullName": "Pixels",
+    "snapshotAssets": [
+      {
+        "asset": "RONIN",
+        "icon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20250205/36f0a60d-4e5c-44fc-aa02-c549b7aaa8ad.png"
+      }
+    ],
+    "airdropPeriodStart": 1709596800000,
+    "airdropPeriodEnd": 1709769599000,
+    "snapshotTimes": [
+      1707436799000
+    ],
+    "airdropStatus": "COMPLETED",
+    "link": "https://www.binance.com/en/support/announcement/fc7fbee9911c44b6b072d97b9dc6933a",
+    "linkRelative": "/support/announcement/fc7fbee9911c44b6b072d97b9dc6933a",
+    "distributed": false,
+    "topFlag": false,
+    "futuresSymbol": "PIXELUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 7,
+    "futuresQuantityPrecision": 0,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1708354800000
+  },
+  {
+    "airdropId": 194,
+    "airdropAsset": "STRK",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20240220/55fcd8fb-bf2b-426b-9cb7-2a300868cce7.png",
+    "airdropAssetFullName": "Starknet Token",
+    "snapshotAssets": [
+      {
+        "asset": "BETH",
+        "icon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20201230/c4f276e4-512f-491b-b651-9776578c9b79.png"
+      }
+    ],
+    "airdropPeriodStart": 1708214400000,
+    "airdropPeriodEnd": 1708819199000,
+    "snapshotTimes": [
+      1663286399000
+    ],
+    "airdropStatus": "COMPLETED",
+    "link": "https://www.binance.com/en/support/announcement/binance-earn-completes-the-starknet-strk-distribution-plan-for-eth-staking-users-750ac04166e248aabdf2b72d69c9d729",
+    "linkRelative": "/support/announcement/binance-earn-completes-the-starknet-strk-distribution-plan-for-eth-staking-users-750ac04166e248aabdf2b72d69c9d729",
+    "distributed": false,
+    "topFlag": false,
+    "futuresSymbol": "STRKUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 7,
+    "futuresQuantityPrecision": 1,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1708448400000
+  },
+  {
+    "airdropId": 46,
+    "airdropAsset": "ETHW",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20220915/8a5f5fe0-efed-4b22-ab1c-42f9ed12d812.png",
+    "airdropAssetFullName": "Ethereum PoW",
+    "snapshotAssets": [
+      {
+        "asset": "ETH",
+        "icon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20201110/3a8c9fe6-2a76-4ace-aa07-415d994de6f0.png"
+      }
+    ],
+    "airdropPeriodStart": 1663286400000,
+    "airdropPeriodEnd": 1667260799000,
+    "snapshotTimes": [
+      1663224162000
+    ],
+    "airdropStatus": "COMPLETED",
+    "link": "https://www.binance.com/en/support/announcement/binance-completes-distribution-of-ethereum-proof-of-work-ethw-tokens-2022-09-20-ff51359d19d241b08a97d82071cb891c",
+    "linkRelative": "/support/announcement/binance-completes-distribution-of-ethereum-proof-of-work-ethw-tokens-2022-09-20-ff51359d19d241b08a97d82071cb891c",
+    "distributed": false,
+    "topFlag": false,
+    "futuresSymbol": "ETHWUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 6,
+    "futuresQuantityPrecision": 0,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1701174600000
+  },
+  {
+    "airdropId": 50,
+    "airdropAsset": "DIA",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/images/20200902/cb2cc5d2-312f-483a-8a7d-3de60e4e7840.png",
+    "airdropAssetFullName": "DIA",
+    "snapshotAssets": [
+      {
+        "asset": "DIA",
+        "icon": "https://bin.bnbstatic.com/images/20200902/cb2cc5d2-312f-483a-8a7d-3de60e4e7840.png"
+      }
+    ],
+    "airdropPeriodStart": 1609459200000,
+    "airdropPeriodEnd": 1612137599000,
+    "snapshotTimes": [
+      1601028000000,
+      1607594400000
+    ],
+    "airdropStatus": "COMPLETED",
+    "link": "https://www.binance.com/en/support/announcement/dia-distribution-is-now-complete-46d1c0f35d5641629672167d2d370295",
+    "linkRelative": "/support/announcement/dia-distribution-is-now-complete-46d1c0f35d5641629672167d2d370295",
+    "distributed": false,
+    "topFlag": false,
+    "futuresSymbol": "DIAUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 7,
+    "futuresQuantityPrecision": 0,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1727872200000
+  },
+  {
+    "airdropId": 71,
+    "airdropAsset": "SXP",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20250205/6de47134-3727-4c38-8a57-a7fcd771d4b8.png",
+    "airdropAssetFullName": "Solar",
+    "snapshotAssets": [
+      {
+        "asset": "BNB",
+        "icon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20220218/94863af2-c980-42cf-a139-7b9f462a36c2.png"
+      }
+    ],
+    "airdropPeriodStart": 1596240000000,
+    "airdropPeriodEnd": 1606780799000,
+    "snapshotTimes": [
+      1597622400000,
+      1598140800000,
+      1598227200000,
+      1598745600000,
+      1598832000000,
+      1599350400000,
+      1599436800000,
+      1599955200000,
+      1600041600000,
+      1600560000000,
+      1600646400000,
+      1601164800000,
+      1601251200000,
+      1601769600000,
+      1601856000000,
+      1602374400000,
+      1602460800000,
+      1602979200000,
+      1603065600000,
+      1603584000000,
+      1603670400000,
+      1604188800000,
+      1604275200000,
+      1604793600000
+    ],
+    "airdropStatus": "COMPLETED",
+    "link": "https://www.binance.com/en/support/announcement/binance-distributes-sxp-in-12th-week-of-binance-ecosystem-rewards-f09a6bc577cb49d091dd3aa8e11d893b",
+    "linkRelative": "/support/announcement/binance-distributes-sxp-in-12th-week-of-binance-ecosystem-rewards-f09a6bc577cb49d091dd3aa8e11d893b",
+    "distributed": false,
+    "topFlag": false,
+    "futuresSymbol": "SXPUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 4,
+    "futuresQuantityPrecision": 1,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1569398400000
+  },
+  {
+    "airdropId": 83,
+    "airdropAsset": "JST",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20200522/3dbaccf0-e55c-4bf6-ac6c-d8ea9b7943f0.png",
+    "airdropAssetFullName": "JUST",
+    "snapshotAssets": [
+      {
+        "asset": "TRX",
+        "icon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20201110/dd9332e2-0a23-4228-89b2-50d188a09e2b.png"
+      }
+    ],
+    "airdropPeriodStart": 1588291200000,
+    "airdropPeriodEnd": 1596239999000,
+    "snapshotTimes": [
+      1589932800000,
+      1592611200000,
+      1595203200000
+    ],
+    "airdropStatus": "COMPLETED",
+    "link": "https://www.binance.com/en/support/announcement/updates-to-the-jst-token-airdrop-program-e566df02637d452c9f3d84ee63642162",
+    "linkRelative": "/support/announcement/updates-to-the-jst-token-airdrop-program-e566df02637d452c9f3d84ee63642162",
+    "distributed": false,
+    "topFlag": false,
+    "futuresSymbol": "JSTUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 7,
+    "futuresQuantityPrecision": 0,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1745832600000
+  },
+  {
+    "airdropId": 60,
+    "airdropAsset": "VTHO",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20250711/b33f007b-a194-47e3-a71a-fd81abd9a771.jpeg",
+    "airdropAssetFullName": "VeThor Token",
+    "snapshotAssets": [
+      {
+        "asset": "VET",
+        "icon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20250711/0d448ed0-8136-4a31-93ae-7678a79a6aea.jpeg"
+      }
+    ],
+    "airdropPeriodStart": 1533081600000,
+    "airdropPeriodEnd": 1535759999000,
+    "snapshotTimes": [
+      1533081600000
+    ],
+    "airdropStatus": "COMPLETED",
+    "link": "https://www.binance.com/en/support/announcement/100-million-vtho-airdrop-for-vet-holders-360009187992",
+    "linkRelative": "/support/announcement/100-million-vtho-airdrop-for-vet-holders-360009187992",
+    "distributed": false,
+    "topFlag": false,
+    "futuresSymbol": "VTHOUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 7,
+    "futuresQuantityPrecision": 0,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1737538200000
+  },
+  {
+    "airdropId": 63,
+    "airdropAsset": "ONT",
+    "airdropAssetIcon": "https://bin.bnbstatic.com/images/20200708/e47d06e2-84f8-411d-b982-e2e5e18f37c2.png",
+    "airdropAssetFullName": "Ontology",
+    "snapshotAssets": [
+      {
+        "asset": "NEO",
+        "icon": "https://bin.bnbstatic.com/image/admin_mgs_image_upload/20201110/88cf746f-31d3-469f-a499-31f7cf20b2cd.png"
+      }
+    ],
+    "airdropPeriodStart": 1519862400000,
+    "airdropPeriodEnd": 1533081599000,
+    "snapshotTimes": [
+      1519866933000
+    ],
+    "airdropStatus": "COMPLETED",
+    "link": "https://www.binance.com/en/support/announcement/binance-supports-ontology-ont-airdrop-for-neo-holders-360001183332",
+    "linkRelative": "/support/announcement/binance-supports-ontology-ont-airdrop-for-neo-holders-360001183332",
+    "distributed": false,
+    "topFlag": false,
+    "futuresSymbol": "ONTUSDT",
+    "futuresQuoteAsset": "USDT",
+    "futuresPricePrecision": 4,
+    "futuresQuantityPrecision": 1,
+    "futuresMaintMarginPercent": "2.5000",
+    "futuresOnboardDate": 1569398400000
+  }
+]
