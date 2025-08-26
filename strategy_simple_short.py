@@ -3,15 +3,16 @@ import json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import vectorbt as vbt
 from datetime import datetime
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 import warnings
 warnings.filterwarnings('ignore')
 
-class CryptoPortfolioShortStrategy:
+class VectorBTCryptoShortStrategy:
     def __init__(self, data_folder: str, initial_portfolio: float = 10000, investment_per_asset: float = 1000):
         """
-        Initialize the crypto portfolio SHORT strategy with vectorized calculations.
+        Initialize the crypto portfolio SHORT strategy using VectorBT.
         
         Args:
             data_folder: Path to folder containing JSON price history files
@@ -22,11 +23,16 @@ class CryptoPortfolioShortStrategy:
         self.initial_portfolio = initial_portfolio
         self.investment_per_asset = investment_per_asset
         self.assets_data = {}
-        self.trades_df = None  # Store all SHORT trades in vectorized format
+        self.trades_df = None
+        self.price_df = None
+        self.portfolio = None
+        
+        # Configure VectorBT settings
+        vbt.settings.set_theme("dark")
+        vbt.settings.portfolio.stats['incl_unrealized'] = True
         
     def load_asset_data(self) -> Dict[str, pd.DataFrame]:
         """Load all asset data from JSON files."""
-        print("Loading asset data for SHORT strategy...")
         
         for filename in os.listdir(self.data_folder):
             if filename.endswith('.json'):
@@ -42,18 +48,107 @@ class CryptoPortfolioShortStrategy:
                 price_df = df[['open', 'high', 'low', 'close', 'volume']].copy()
                 
                 self.assets_data[asset_name] = price_df
-                print(f"Loaded {asset_name}: {len(price_df)} candles")
         
         return self.assets_data
     
-    def create_trades_dataframe(self):
-        """Create a vectorized trades dataframe for all SHORT positions."""
-        print("\nCreating vectorized SHORT trades dataframe...")
-        print("=" * 80)
+    def prepare_vectorbt_data(self):
+        """Prepare data for VectorBT simulation."""
+        
+        # Create unified price DataFrame for VectorBT
+        price_data = {}
+        for asset_name, asset_data in self.assets_data.items():
+            price_data[asset_name] = asset_data['close']
+        
+        self.price_df = pd.DataFrame(price_data)
+        self.price_df = self.price_df.fillna(method='ffill').fillna(method='bfill')
+        
+        # Create signal matrices - short at first candle, exit at last candle
+        short_entries = pd.DataFrame(False, index=self.price_df.index, columns=self.price_df.columns)
+        short_exits = pd.DataFrame(False, index=self.price_df.index, columns=self.price_df.columns)
+        
+        # Set signals for each asset: enter at start, exit at end
+        for asset in self.price_df.columns:
+            if len(self.price_df.index) > 1:
+                short_entries.iloc[0][asset] = True   # Enter short at first candle
+                short_exits.iloc[-1][asset] = True    # Exit short at last candle
+        
+        return short_entries, short_exits
+    
+    def run_vectorbt_simulation(self):
+        """Run VectorBT simulation."""
+        
+        # Prepare signals
+        short_entries, short_exits = self.prepare_vectorbt_data()
+        
+        # Create size matrix based on investment amounts
+        size = short_entries * self.investment_per_asset
+        
+        # Run VectorBT simulation
+        self.portfolio = vbt.Portfolio.from_signals(
+            close=self.price_df,
+            short_entries=short_entries,
+            short_exits=short_exits,
+            size=size,
+            size_type='value',
+            init_cash=self.initial_portfolio,
+            fees=0.001,
+            freq='D',
+        )
+        
+        return self.portfolio
+    
+    def extract_trades_from_vectorbt(self):
+        """Extract trade data from VectorBT portfolio.trades.records_readable"""
+        
+        try:
+            # Get readable trade records from VectorBT
+            trades_readable = self.portfolio.trades.records_readable
+            
+            if len(trades_readable) == 0:
+                return self.create_fallback_trades()
+            
+            # Convert VectorBT trades to our format
+            trades_list = []
+            
+            for _, trade in trades_readable.iterrows():
+                asset = trade['Column']
+                entry_price = trade['Entry Price']
+                exit_price = trade['Exit Price'] 
+                size = trade['Size']  # This will be negative for shorts
+                pnl = trade['PnL']
+                return_pct = trade['Return [%]']
+                
+                # Calculate additional fields for compatibility
+                quantity = abs(size)  # Use absolute value for display
+                investment = quantity * entry_price  # Actual investment amount
+                
+                trades_list.append({
+                    'trade_id': f"SHORT_{asset}",
+                    'asset': asset,
+                    'trade_type': 'SHORT',
+                    'entry_date': trade['Entry Timestamp'],
+                    'exit_date': trade['Exit Timestamp'],
+                    'entry_price': entry_price,
+                    'exit_price': exit_price,
+                    'quantity': quantity,
+                    'investment': investment,
+                    'pnl': pnl,
+                    'return_pct': return_pct,
+                    'side': -1,  # Short = -1
+                    'cash_received': investment
+                })
+            
+            self.trades_df = pd.DataFrame(trades_list)
+            return self.trades_df
+            
+        except Exception as e:
+            return self.create_fallback_trades()
+    
+    def create_fallback_trades(self):
+        """Fallback method if VectorBT trade extraction fails."""
         
         trades_list = []
         
-        # Create SHORT trades for each asset
         for asset_name, price_data in self.assets_data.items():
             entry_date = price_data.index[0]
             exit_date = price_data.index[-1]
@@ -77,186 +172,90 @@ class CryptoPortfolioShortStrategy:
                 'investment': self.investment_per_asset,
                 'pnl': short_pnl,
                 'return_pct': short_return_pct,
-                'side': -1,  # Short = -1
-                'cash_received': self.investment_per_asset  # Cash from short sale
+                'side': -1,
+                'cash_received': self.investment_per_asset
             })
-            
-            print(f"{asset_name:12} SHORT: {tokens_shorted:.6f} tokens @ ${entry_price:.4f} -> ${exit_price:.4f}")
-            print(f"{'':12} Cash received: ${self.investment_per_asset:.2f} | Final PNL: ${short_pnl:.2f} ({short_return_pct:.1f}%)")
-            print("-" * 80)
         
         self.trades_df = pd.DataFrame(trades_list)
         return self.trades_df
     
-    def calculate_portfolio_value_timeline_vectorized(self) -> pd.DataFrame:
-        """Calculate portfolio value timeline using vectorized operations."""
-        print("\nCalculating SHORT portfolio timeline (vectorized)...")
+    def calculate_trading_bot_metrics_vectorbt(self) -> Dict:
+        """Calculate metrics using VectorBT stats."""
         
-        # Get all unique dates
-        all_dates = set()
-        for asset_data in self.assets_data.values():
-            all_dates.update(asset_data.index)
-        all_dates = sorted(list(all_dates))
+        # Get VectorBT stats
+        stats = self.portfolio.stats()
         
-        # Create master price DataFrame with all assets
-        price_df = pd.DataFrame(index=all_dates)
+        # Extract metrics with fallbacks
+        def safe_extract(key, default=0):
+            try:
+                return float(stats.get(key, default))
+            except (ValueError, TypeError, KeyError):
+                return default
         
-        # Add all asset prices with forward fill for missing dates
-        for asset_name, asset_data in self.assets_data.items():
-            price_df[f"{asset_name}_price"] = asset_data['close'].reindex(all_dates, method='ffill')
+        total_return = safe_extract('Total Return [%]')
+        sharpe_ratio = safe_extract('Sharpe Ratio')
+        max_drawdown = safe_extract('Max Drawdown [%]')
+        calmar_ratio = safe_extract('Calmar Ratio')
+        win_rate = safe_extract('Win Rate [%]')
+        profit_factor = safe_extract('Profit Factor', 1.0)
         
-        # Calculate PNL for each SHORT trade at each date using vectorization
-        pnl_df = pd.DataFrame(index=all_dates)
-        
-        for _, trade in self.trades_df.iterrows():
-            trade_id = trade['trade_id']
-            asset = trade['asset']
-            entry_date = trade['entry_date']
-            entry_price = trade['entry_price']
-            quantity = trade['quantity']
-            
-            price_col = f"{asset}_price"
-            
-            # Vectorized SHORT PNL: (entry_price - current_price) * quantity
-            # Profit when current_price < entry_price (price went down)
-            mask = price_df.index >= entry_date
-            pnl_df.loc[mask, trade_id] = (entry_price - price_df.loc[mask, price_col]) * quantity
-            pnl_df.loc[~mask, trade_id] = 0  # No PNL before entry
-        
-        # Fill NaN values with 0
-        pnl_df = pnl_df.fillna(0)
-        
-        # Calculate portfolio timeline using vectorized sum
-        portfolio_timeline = pd.DataFrame(index=all_dates)
-        portfolio_timeline['Total_PNL'] = pnl_df.sum(axis=1)  # Sum all SHORT PNLs
-        portfolio_timeline['Portfolio_Value'] = self.initial_portfolio + portfolio_timeline['Total_PNL']
-        
-        # Calculate daily returns for metrics calculation
-        portfolio_timeline['Daily_Return'] = portfolio_timeline['Portfolio_Value'].pct_change()
-        portfolio_timeline['Cumulative_Return'] = (portfolio_timeline['Portfolio_Value'] / self.initial_portfolio - 1) * 100
-        
-        # Add individual trade PNLs for analysis
-        for trade_id in pnl_df.columns:
-            portfolio_timeline[f"PNL_{trade_id}"] = pnl_df[trade_id]
-        
-        return portfolio_timeline
-    
-    def calculate_trading_bot_metrics(self, timeline_df: pd.DataFrame) -> Dict:
-        """Calculate comprehensive trading bot metrics."""
-        print(f"\n{'='*90}")
-        print("TRADING BOT PERFORMANCE METRICS")
-        print(f"{'='*90}")
-        
-        # Basic returns
-        daily_returns = timeline_df['Daily_Return'].dropna()
-        portfolio_values = timeline_df['Portfolio_Value']
-        total_return = (portfolio_values.iloc[-1] / self.initial_portfolio - 1) * 100
-        
-        # Calculate metrics
-        metrics = {}
-        
-        # 1. Sharpe Ratio (assuming 0% risk-free rate, annualized)
-        if len(daily_returns) > 0 and daily_returns.std() != 0:
-            trading_days_per_year = 365  # Crypto trades 365 days
-            sharpe_ratio = (daily_returns.mean() * trading_days_per_year) / (daily_returns.std() * np.sqrt(trading_days_per_year))
+        # Additional metrics
+        portfolio_value = self.portfolio.value()
+        if len(portfolio_value.shape) > 1:
+            final_value = portfolio_value.sum(axis=1).iloc[-1]
         else:
-            sharpe_ratio = 0
+            final_value = portfolio_value.iloc[-1]
         
-        # 2. Maximum Drawdown
-        running_max = portfolio_values.expanding().max()
-        drawdown = (portfolio_values - running_max) / running_max * 100
-        max_drawdown = drawdown.min()
+        # For SHORT strategy, net_profit should be based on PNL from trades, not portfolio value
+        # Portfolio value includes unused cash, so we need to calculate actual PNL
+        if self.trades_df is not None and len(self.trades_df) > 0:
+            net_profit = self.trades_df['pnl'].sum()
+        else:
+            # Fallback to portfolio-based calculation
+            net_profit = final_value - self.initial_portfolio
         
-        # 3. Maximum Drawdown Duration (days)
-        drawdown_start_dates = []
-        drawdown_end_dates = []
-        in_drawdown = False
-        
-        for i, dd in enumerate(drawdown):
-            if dd < -0.01 and not in_drawdown:  # Start of drawdown (>0.01% down)
-                drawdown_start_dates.append(timeline_df.index[i])
-                in_drawdown = True
-            elif dd >= -0.01 and in_drawdown:  # End of drawdown
-                drawdown_end_dates.append(timeline_df.index[i])
-                in_drawdown = False
-        
-        if in_drawdown:  # Still in drawdown at end
-            drawdown_end_dates.append(timeline_df.index[-1])
-        
-        max_dd_duration = 0
-        if len(drawdown_start_dates) > 0 and len(drawdown_end_dates) > 0:
-            for start, end in zip(drawdown_start_dates, drawdown_end_dates):
-                duration = (end - start).days
-                max_dd_duration = max(max_dd_duration, duration)
-        
-        # 4. Volatility (annualized)
+        # Calculate volatility
+        returns = self.portfolio.returns()
+        if len(returns.shape) > 1:
+            daily_returns = returns.sum(axis=1).dropna()
+        else:
+            daily_returns = returns.dropna()
+            
         volatility = daily_returns.std() * np.sqrt(365) * 100 if len(daily_returns) > 0 else 0
         
-        # 5. Calmar Ratio (Annual Return / Max Drawdown)
-        days_total = (timeline_df.index[-1] - timeline_df.index[0]).days
-        annualized_return = (total_return / days_total) * 365 if days_total > 0 else 0
-        calmar_ratio = abs(annualized_return / max_drawdown) if max_drawdown != 0 else 0
+        # Trade count from VectorBT
+        try:
+            total_trades = len(self.portfolio.trades.records)
+        except:
+            total_trades = len(self.trades_df) if self.trades_df is not None else 0
         
-        # 6. Win Rate & Profit Factor
-        winning_trades = (self.trades_df['pnl'] > 0).sum()
-        total_trades = len(self.trades_df)
-        win_rate = (winning_trades / total_trades) * 100 if total_trades > 0 else 0
-        
-        total_wins = self.trades_df[self.trades_df['pnl'] > 0]['pnl'].sum()
-        total_losses = abs(self.trades_df[self.trades_df['pnl'] <= 0]['pnl'].sum())
-        profit_factor = total_wins / total_losses if total_losses > 0 else float('inf')
-        
-        # 7. Average Trade Duration
-        self.trades_df['trade_duration'] = (self.trades_df['exit_date'] - self.trades_df['entry_date']).dt.days
-        avg_trade_duration = self.trades_df['trade_duration'].mean()
-        
-        # 8. Recovery Factor (Net Profit / Max Drawdown)
-        net_profit = timeline_df['Total_PNL'].iloc[-1]
+        # Recovery factor - use actual net profit for calculation
         recovery_factor = abs(net_profit / (max_drawdown * self.initial_portfolio / 100)) if max_drawdown != 0 else 0
         
         # Store metrics
         metrics = {
             'total_return': total_return,
-            'annualized_return': annualized_return,
             'sharpe_ratio': sharpe_ratio,
             'max_drawdown': max_drawdown,
-            'max_dd_duration': max_dd_duration,
-            'volatility': volatility,
             'calmar_ratio': calmar_ratio,
             'win_rate': win_rate,
             'profit_factor': profit_factor,
-            'avg_trade_duration': avg_trade_duration,
+            'volatility': volatility,
             'recovery_factor': recovery_factor,
             'total_trades': total_trades,
             'net_profit': net_profit,
-            'days_trading': days_total
+            'final_value': final_value
         }
-        
-        # Print metrics
-        print("📊 KEY TRADING BOT METRICS:")
-        print("-" * 50)
-        print(f"Total Return: {total_return:.2f}%")
-        print(f"Annualized Return: {annualized_return:.2f}%")
-        print(f"Sharpe Ratio: {sharpe_ratio:.3f}")
-        print(f"Maximum Drawdown: {max_drawdown:.2f}%")
-        print(f"Max DD Duration: {max_dd_duration} days")
-        print(f"Volatility (ann.): {volatility:.2f}%")
-        print(f"Calmar Ratio: {calmar_ratio:.3f}")
-        print(f"Win Rate: {win_rate:.1f}%")
-        print(f"Profit Factor: {profit_factor:.2f}")
-        print(f"Avg Trade Duration: {avg_trade_duration:.1f} days")
-        print(f"Recovery Factor: {recovery_factor:.2f}")
-        print(f"Total Trades: {total_trades}")
         
         return metrics
     
     def calculate_trade_based_metrics(self):
-        """Calculate metrics based on individual SHORT trades."""
-        print(f"\n{'='*90}")
-        print("TRADE-BASED SHORT PERFORMANCE ANALYSIS")
-        print(f"{'='*90}")
+        """Calculate trade metrics using extracted VectorBT trade data."""
         
-        # Calculate trade statistics using vectorized operations
+        if self.trades_df is None or len(self.trades_df) == 0:
+            return {}
+        
+        # Use VectorBT trade data for analysis
         total_trades = len(self.trades_df)
         winning_trades = (self.trades_df['pnl'] > 0).sum()
         losing_trades = (self.trades_df['pnl'] <= 0).sum()
@@ -277,43 +276,16 @@ class CryptoPortfolioShortStrategy:
         
         # Risk metrics
         total_cash_received = self.trades_df['cash_received'].sum()
-        overall_return_pct = (total_pnl / total_investment) * 100
-        profit_factor = abs(avg_win * winning_trades) / abs(avg_loss * losing_trades) if losing_trades > 0 else float('inf')
-        
-        print("SHORT TRADES PERFORMANCE:")
-        print("-" * 50)
-        print(f"Total Trades: {total_trades}")
-        print(f"Winning Trades: {winning_trades} ({win_rate:.1f}%)")
-        print(f"Losing Trades: {losing_trades}")
-        print(f"Win Rate: {win_rate:.1f}%")
-        print(f"")
-        print(f"Total Investment: ${total_investment:,.2f}")
-        print(f"Total Cash Received: ${total_cash_received:,.2f}")
-        print(f"Total PNL: ${total_pnl:,.2f}")
-        print(f"Overall Return: {overall_return_pct:.2f}%")
-        print(f"Average Return per Trade: {avg_return_per_trade:.2f}%")
-        print(f"")
-        print(f"Best Trade: ${best_trade:,.2f}")
-        print(f"Worst Trade: ${worst_trade:,.2f}")
-        print(f"Average Win: ${avg_win:,.2f}")
-        print(f"Average Loss: ${avg_loss:,.2f}")
-        print(f"Profit Factor: {profit_factor:.2f}")
+        overall_return_pct = (total_pnl / total_investment) * 100 if total_investment > 0 else 0
+        profit_factor_orig = abs(avg_win * winning_trades) / abs(avg_loss * losing_trades) if losing_trades > 0 else float('inf')
         
         # Price movement analysis
-        print(f"\nPRICE MOVEMENT ANALYSIS:")
-        print("-" * 50)
-        
-        # Calculate price changes vectorized
         self.trades_df['price_change_pct'] = ((self.trades_df['exit_price'] - self.trades_df['entry_price']) / self.trades_df['entry_price']) * 100
         self.trades_df['price_direction'] = self.trades_df['price_change_pct'].apply(lambda x: 'DOWN' if x < 0 else 'UP' if x > 0 else 'FLAT')
         
         price_down_count = (self.trades_df['price_change_pct'] < 0).sum()
         price_up_count = (self.trades_df['price_change_pct'] > 0).sum()
         avg_price_change = self.trades_df['price_change_pct'].mean()
-        
-        print(f"Assets that went DOWN: {price_down_count} ({(price_down_count/total_trades)*100:.1f}%)")
-        print(f"Assets that went UP: {price_up_count} ({(price_up_count/total_trades)*100:.1f}%)")
-        print(f"Average Price Change: {avg_price_change:.2f}%")
         
         return {
             'total_trades': total_trades,
@@ -326,122 +298,109 @@ class CryptoPortfolioShortStrategy:
             'avg_return_per_trade': avg_return_per_trade,
             'best_trade': best_trade,
             'worst_trade': worst_trade,
-            'profit_factor': profit_factor,
+            'profit_factor': profit_factor_orig,
             'price_down_count': price_down_count,
             'avg_price_change': avg_price_change
         }
     
     def create_individual_trades_analysis(self):
-        """Display individual SHORT trade performance with vectorized sorting."""
-        print(f"\n{'='*120}")
-        print("INDIVIDUAL SHORT TRADES PERFORMANCE")
-        print(f"{'='*120}")
+        """Individual trades analysis using VectorBT trade data."""
         
-        # Sort trades by PNL descending using vectorized operations
+        if self.trades_df is None or len(self.trades_df) == 0:
+            return
+        
+        # Sort trades by PNL descending
         sorted_trades = self.trades_df.sort_values('pnl', ascending=False)
-        
-        print(f"{'TRADE ID':<20} {'ASSET':<10} {'ENTRY $':<10} {'EXIT $':<10} {'QTY':<12} {'PRICE Δ%':<10} {'PNL $':<12} {'RETURN %':<10}")
-        print("-" * 120)
-        
-        for _, trade in sorted_trades.iterrows():
-            price_change = ((trade['exit_price'] - trade['entry_price']) / trade['entry_price']) * 100
-            print(f"{trade['trade_id']:<20} {trade['asset']:<10} {trade['entry_price']:<10.4f} "
-                  f"{trade['exit_price']:<10.4f} {trade['quantity']:<12.6f} {price_change:<10.1f} "
-                  f"{trade['pnl']:<12.2f} {trade['return_pct']:<10.2f}")
         
         # Summary statistics
         profitable_trades = sorted_trades[sorted_trades['pnl'] > 0]
         losing_trades = sorted_trades[sorted_trades['pnl'] <= 0]
         
-        if len(profitable_trades) > 0:
-            print(f"\n🟢 TOP 3 PROFITABLE SHORTS (Price went DOWN):")
-            for _, trade in profitable_trades.head(3).iterrows():
-                price_drop = ((trade['entry_price'] - trade['exit_price']) / trade['entry_price']) * 100
-                print(f"   {trade['asset']}: Price dropped {price_drop:.1f}% → Profit ${trade['pnl']:.2f}")
-        
-        if len(losing_trades) > 0:
-            print(f"\n🔴 TOP 3 LOSING SHORTS (Price went UP):")
-            for _, trade in losing_trades.tail(3).iterrows():
-                price_rise = ((trade['exit_price'] - trade['entry_price']) / trade['entry_price']) * 100
-                print(f"   {trade['asset']}: Price rose {price_rise:.1f}% → Loss ${trade['pnl']:.2f}")
+        return sorted_trades, profitable_trades, losing_trades
     
-    def create_enhanced_trading_bot_chart(self, timeline_df: pd.DataFrame, bot_metrics: Dict):
-        """Create enhanced PNL chart with trading bot metrics displayed."""
+    def create_enhanced_trading_bot_chart(self, bot_metrics: Dict):
+        """Create chart using VectorBT data with original styling."""
+        
         os.makedirs("./outputs", exist_ok=True)
         
-        # Create figure with subplots
+        # Get VectorBT portfolio value
+        portfolio_value = self.portfolio.value()
+        if len(portfolio_value.shape) > 1:
+            portfolio_values = portfolio_value.sum(axis=1)
+        else:
+            portfolio_values = portfolio_value
+        
+        # Calculate PNL timeline from portfolio value changes (for charting)
+        baseline_value = portfolio_values.iloc[0]
+        pnl_timeline = portfolio_values - baseline_value
+        
+        # Create figure
         fig = plt.figure(figsize=(20, 14))
         
-        # Main PNL chart (top 70% of figure)
+        # Main PNL chart
         ax1 = plt.subplot2grid((4, 3), (0, 0), colspan=3, rowspan=3)
         
         # Main PNL line
-        ax1.plot(timeline_df.index, timeline_df['Total_PNL'], 
+        ax1.plot(pnl_timeline.index, pnl_timeline.values, 
                 linewidth=4, color='purple', label='SHORT Strategy Total PNL', alpha=0.9)
         
         # Break even line
         ax1.axhline(y=0, color='blue', linestyle='--', alpha=0.7, linewidth=2, label='Break Even')
         
         # Add drawdown visualization
-        portfolio_values = timeline_df['Portfolio_Value']
         running_max = portfolio_values.expanding().max()
         drawdown_dollars = portfolio_values - running_max
         
-        # Fill drawdown areas
-        ax1.fill_between(timeline_df.index, timeline_df['Total_PNL'], 
-                        timeline_df['Total_PNL'] - drawdown_dollars, 
+        ax1.fill_between(pnl_timeline.index, pnl_timeline.values, 
+                        pnl_timeline.values - drawdown_dollars, 
                         where=(drawdown_dollars < 0), color='red', alpha=0.2, label='Drawdown')
         
-        # === MODIFICATION START ===
-        # Add individual trade entry markers and labels
-        plotted_legend_entry = False
-        for _, trade in self.trades_df.iterrows():
-            entry_date = trade['entry_date']
-            asset_name = trade['asset']
+        # Add trade entry markers
+        if self.trades_df is not None and len(self.trades_df) > 0:
+            plotted_legend_entry = False
+            for _, trade in self.trades_df.iterrows():
+                entry_date = trade['entry_date']
+                asset_name = trade['asset']
 
-            # Find the corresponding PNL at the entry date
-            # Handle cases where the exact entry date might not be in the timeline index
-            if entry_date in timeline_df.index:
-                entry_pnl = timeline_df.loc[entry_date, 'Total_PNL']
-            else:
-                # Find the closest date available in the index if exact match not found
-                closest_date_index = timeline_df.index.get_loc(entry_date, method='nearest')
-                closest_date = timeline_df.index[closest_date_index]
-                entry_pnl = timeline_df.loc[closest_date, 'Total_PNL']
+                # Find PNL at entry date
+                if entry_date in pnl_timeline.index:
+                    entry_pnl = pnl_timeline.loc[entry_date]
+                else:
+                    closest_idx = pnl_timeline.index.get_indexer([entry_date], method='nearest')[0]
+                    if closest_idx >= 0 and closest_idx < len(pnl_timeline):
+                        entry_pnl = pnl_timeline.iloc[closest_idx]
+                    else:
+                        continue
 
-            # Add a downward triangle marker for the short entry
-            # Use a flag to add the legend entry only once to avoid clutter
-            label = 'Short Entry' if not plotted_legend_entry else None
-            ax1.scatter(entry_date, entry_pnl, color='orange', s=120,
-                       marker='o', zorder=5, edgecolors='black', linewidth=2, label=label)
+                # Add marker
+                label = 'Short Entry' if not plotted_legend_entry else None
+                ax1.scatter(entry_date, entry_pnl, color='orange', s=120,
+                           marker='o', zorder=5, edgecolors='black', linewidth=2, label=label)
 
+                if not plotted_legend_entry:
+                    plotted_legend_entry = True
 
-
-            if not plotted_legend_entry:
-                plotted_legend_entry = True
-
-
-            # Add text label (annotation) with the asset name
-            ax1.annotate(asset_name,
-                         xy=(entry_date, entry_pnl), # Point to annotate
-                         xytext=(0, 10), # Offset the text 10 points vertically above the marker
-                         textcoords='offset points',
-                         ha='center',
-                         fontsize=9,
-                         fontweight='bold',
-                         color='darkred',
-                          arrowprops=dict(arrowstyle='->', color='orange', lw=1.5),
-                         bbox=dict(boxstyle='round,pad=0.3', facecolor='lightyellow', 
-                                alpha=0.9, edgecolor='orange'))
-        # === MODIFICATION END ===
+                # Add annotation
+                ax1.annotate(asset_name,
+                             xy=(entry_date, entry_pnl),
+                             xytext=(0, 10),
+                             textcoords='offset points',
+                             ha='center',
+                             fontsize=9,
+                             fontweight='bold',
+                             color='darkred',
+                             arrowprops=dict(arrowstyle='->', color='orange', lw=1.5),
+                             bbox=dict(boxstyle='round,pad=0.3', facecolor='lightyellow', 
+                                    alpha=0.9, edgecolor='orange'))
         
         # Color fill areas
-        ax1.fill_between(timeline_df.index, timeline_df['Total_PNL'], 0, 
-                        where=(timeline_df['Total_PNL'] >= 0), color='green', alpha=0.3, label='Profit Zone')
-        ax1.fill_between(timeline_df.index, timeline_df['Total_PNL'], 0, 
-                        where=(timeline_df['Total_PNL'] < 0), color='red', alpha=0.3, label='Loss Zone')
+        ax1.fill_between(pnl_timeline.index, pnl_timeline.values, 0, 
+                        where=(pnl_timeline.values >= 0), color='green', alpha=0.3, label='Profit Zone')
+        ax1.fill_between(pnl_timeline.index, pnl_timeline.values, 0, 
+                        where=(pnl_timeline.values < 0), color='red', alpha=0.3, label='Loss Zone')
         
-        ax1.set_title('STRATEGY: SHORT 1k per Asset', 
+        # Styling
+        ax1.set_title('VectorBT STRATEGY: SHORT 1k per Asset', 
                      fontsize=18, fontweight='bold', pad=20)
         ax1.set_xlabel('Date', fontsize=12)
         ax1.set_ylabel('Cumulative PNL ($)', fontsize=12)
@@ -449,11 +408,10 @@ class CryptoPortfolioShortStrategy:
         ax1.legend(fontsize=10, loc='upper left')
         ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
         
-        # Metrics display table (bottom 30% of figure)
+        # Metrics table
         ax2 = plt.subplot2grid((4, 3), (3, 0), colspan=3)
         ax2.axis('off')
         
-        # Prepare metrics data for table
         metrics_data = [
             ['Total Return', f"{bot_metrics['total_return']:.2f}%"],
             ['Sharpe Ratio', f"{bot_metrics['sharpe_ratio']:.3f}"],
@@ -463,41 +421,34 @@ class CryptoPortfolioShortStrategy:
             ['Profit Factor', f"{bot_metrics['profit_factor']:.2f}"],
             ['Volatility (Ann.)', f"{bot_metrics['volatility']:.2f}%"],
             ['Recovery Factor', f"{bot_metrics['recovery_factor']:.2f}"],
-            ['Max DD Duration', f"{bot_metrics['max_dd_duration']} days"],
-            ['Avg Trade Duration', f"{bot_metrics['avg_trade_duration']:.1f} days"],
             ['Total Trades', f"{bot_metrics['total_trades']}"],
             ['Net Profit', f"${bot_metrics['net_profit']:,.2f}"]
         ]
         
-        # Create table
+        # Create and style table
         table = ax2.table(cellText=metrics_data,
                          colLabels=['Metric', 'Value'],
                          cellLoc='center',
                          loc='center',
                          colWidths=[0.3, 0.2])
         
-        # Style the table
         table.auto_set_font_size(False)
         table.set_fontsize(10)
         table.scale(1.2, 1.8)
         
-        # Color code the table
+        # Color coding
         for i in range(len(metrics_data)):
-            # Color cells based on values
-            metric_name = metrics_data[i][0]
-            value_str = metrics_data[i][1]
-            
-            if 'Return' in metric_name or 'Profit Factor' in metric_name:
+            if 'Return' in metrics_data[i][0] or 'Profit Factor' in metrics_data[i][0]:
                 if bot_metrics['total_return'] > 0 or bot_metrics['profit_factor'] > 1:
-                    table[(i+1, 1)].set_facecolor('#90EE90')  # Light green
-                else:
-                    table[(i+1, 1)].set_facecolor('#FFB6C1')  # Light red
-            elif 'Drawdown' in metric_name:
-                if bot_metrics['max_drawdown'] > -10:  # Less than 10% drawdown is good
                     table[(i+1, 1)].set_facecolor('#90EE90')
                 else:
                     table[(i+1, 1)].set_facecolor('#FFB6C1')
-            elif 'Sharpe' in metric_name or 'Calmar' in metric_name:
+            elif 'Drawdown' in metrics_data[i][0]:
+                if bot_metrics['max_drawdown'] > -10:
+                    table[(i+1, 1)].set_facecolor('#90EE90')
+                else:
+                    table[(i+1, 1)].set_facecolor('#FFB6C1')
+            elif 'Sharpe' in metrics_data[i][0] or 'Calmar' in metrics_data[i][0]:
                 if bot_metrics['sharpe_ratio'] > 1 or bot_metrics['calmar_ratio'] > 1:
                     table[(i+1, 1)].set_facecolor('#90EE90')
                 else:
@@ -510,62 +461,45 @@ class CryptoPortfolioShortStrategy:
         
         plt.tight_layout()
         
-        # Save the chart
-        chart_filename = "./outputs/strategy_simple_short.png"
+        # Save chart
+        chart_filename = "./outputs/vectorbt_strategy_with_trade_records.png"
         plt.savefig(chart_filename, dpi=300, bbox_inches='tight', facecolor='white')
-        print(f"📊 Enhanced Trading Bot Chart saved to: {chart_filename}")
-        
-        # Print strategy summary
-        final_pnl = timeline_df['Total_PNL'].iloc[-1]
-        total_investment = len(self.trades_df) * self.investment_per_asset
-        
-        print("\n📍 TRADING BOT SUMMARY:")
-        print(f"  • Strategy: SHORT {len(self.trades_df)} assets @ ${self.investment_per_asset:,} each")
-        print(f"  • Total Capital: ${total_investment:,}")
-        print(f"  • Net P&L: ${final_pnl:,.2f}")
-        print(f"  • ROI: {(final_pnl/self.initial_portfolio)*100:.2f}%")
-        print(f"  • Sharpe Ratio: {bot_metrics['sharpe_ratio']:.3f}")
-        print(f"  • Max Drawdown: {bot_metrics['max_drawdown']:.2f}%")
         
         plt.show()
         return fig
     
     def run_short_strategy(self):
-        """Run the complete vectorized SHORT trading strategy with enhanced metrics."""
-        print("Starting Enhanced Crypto Portfolio SHORT Strategy with Trading Bot Metrics")
-        print("=" * 90)
-        print("📉 SHORT STRATEGY: Profit when crypto prices go DOWN (VECTORIZED)")
-        print("📊 Enhanced with comprehensive trading bot performance metrics")
-        print("⚡ Optimized with pandas vectorization")
-        print("=" * 90)
+        """Run the complete strategy using VectorBT with portfolio.trades.records_readable"""
         
-        # Load data and create trades dataframe
+        # Step 1: Load data
         self.load_asset_data()
-        self.create_trades_dataframe()
         
-        # Calculate portfolio timeline using vectorized operations
-        timeline_df = self.calculate_portfolio_value_timeline_vectorized()
+        # Step 2: Run VectorBT simulation
+        self.run_vectorbt_simulation()
         
-        # Calculate comprehensive trading bot metrics
-        bot_metrics = self.calculate_trading_bot_metrics(timeline_df)
+        # Step 3: Extract trades from VectorBT (uses portfolio.trades.records_readable)
+        self.extract_trades_from_vectorbt()
         
-        # Calculate trade-based metrics
+        # Step 4: Calculate metrics using VectorBT
+        bot_metrics = self.calculate_trading_bot_metrics_vectorbt()
+        
+        # Step 5: Trade analysis using extracted VectorBT trade data
         trade_metrics = self.calculate_trade_based_metrics()
         
-        # Show individual trades analysis
+        # Step 6: Individual trades analysis
         self.create_individual_trades_analysis()
         
-        # Create enhanced trading bot chart with metrics
-        self.create_enhanced_trading_bot_chart(timeline_df, bot_metrics)
+        # Step 7: Chart with VectorBT data
+        fig = self.create_enhanced_trading_bot_chart(bot_metrics)
         
-        return timeline_df, bot_metrics, trade_metrics, self.trades_df
+        return bot_metrics, trade_metrics, self.trades_df, self.portfolio
 
 # Usage
 if __name__ == "__main__":
-    strategy = CryptoPortfolioShortStrategy(
+    strategy = VectorBTCryptoShortStrategy(
         data_folder="./outputs/prices_history",
         initial_portfolio=10000,
         investment_per_asset=1000
     )
     
-    timeline_df, bot_metrics, trade_metrics, trades_df = strategy.run_short_strategy()
+    bot_metrics, trade_metrics, trades_df, portfolio = strategy.run_short_strategy()
