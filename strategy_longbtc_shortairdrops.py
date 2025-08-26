@@ -497,7 +497,7 @@ class CryptoPortfolioHedgeStrategy:
         ax1.fill_between(timeline_df.index, timeline_df['Total_PNL'], 0, 
                         where=(timeline_df['Total_PNL'] < 0), color='red', alpha=0.3, label='Loss Zone')
         
-        ax1.set_title('TRADING BOT: HEDGE Strategy Performance with Key Metrics\n(SHORT Altcoins + LONG Bitcoin)', 
+        ax1.set_title('STRATEGY: SHORT 1k per Asset + LONG 1k BTC HEDGE', 
                      fontsize=18, fontweight='bold', pad=20)
         ax1.set_xlabel('Date', fontsize=12)
         ax1.set_ylabel('Cumulative PNL ($)', fontsize=12)

@@ -441,7 +441,7 @@ class CryptoPortfolioShortStrategy:
         ax1.fill_between(timeline_df.index, timeline_df['Total_PNL'], 0, 
                         where=(timeline_df['Total_PNL'] < 0), color='red', alpha=0.3, label='Loss Zone')
         
-        ax1.set_title('TRADING BOT: SHORT Strategy Performance with Key Metrics\n(Vectorized Calculation)', 
+        ax1.set_title('STRATEGY: SHORT 1k per Asset', 
                      fontsize=18, fontweight='bold', pad=20)
         ax1.set_xlabel('Date', fontsize=12)
         ax1.set_ylabel('Cumulative PNL ($)', fontsize=12)
