@@ -4,12 +4,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import vectorbt as vbt
-from datetime import datetime
-from typing import Dict, List, Tuple, Optional
+from typing import Dict
 import warnings
 warnings.filterwarnings('ignore')
 
-class VectorBTCryptoShortStrategy:
+class StrategySimpleShort:
     def __init__(self, data_folder: str, initial_portfolio: float = 10000, investment_per_asset: float = 1000):
         """
         Initialize the crypto portfolio SHORT strategy using VectorBT.
@@ -375,7 +374,7 @@ class VectorBTCryptoShortStrategy:
                 # Add marker
                 label = 'Short Entry' if not plotted_legend_entry else None
                 ax1.scatter(entry_date, entry_pnl, color='orange', s=120,
-                           marker='o', zorder=5, edgecolors='black', linewidth=2, label=label)
+                           marker='v', zorder=5, edgecolors='black', linewidth=2, label=label)
 
                 if not plotted_legend_entry:
                     plotted_legend_entry = True
@@ -462,7 +461,7 @@ class VectorBTCryptoShortStrategy:
         plt.tight_layout()
         
         # Save chart
-        chart_filename = "./outputs/vectorbt_strategy_with_trade_records.png"
+        chart_filename = "./outputs/strategy_simple_short.png"
         plt.savefig(chart_filename, dpi=300, bbox_inches='tight', facecolor='white')
         
         plt.show()
@@ -496,7 +495,7 @@ class VectorBTCryptoShortStrategy:
 
 # Usage
 if __name__ == "__main__":
-    strategy = VectorBTCryptoShortStrategy(
+    strategy = StrategySimpleShort(
         data_folder="./outputs/prices_history",
         initial_portfolio=10000,
         investment_per_asset=1000

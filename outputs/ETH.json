@@ -3,11 +3,11 @@
   "symbol": "ETH",
   "trading_pair": "ETH/USDT",
   "start_date": "2019-01-01T00:00:00",
-  "end_date": "2025-08-26T00:00:00",
-  "data_points": 2430,
+  "end_date": "2025-08-27T00:00:00",
+  "data_points": 2431,
   "date_range": {
     "first_date": "2019-01-01",
-    "last_date": "2025-08-26"
+    "last_date": "2025-08-27"
   },
   "price_data": [
     {
@@ -24305,10 +24305,20 @@
       "datetime": "2025-08-26T00:00:00",
       "date": "2025-08-26",
       "open": 4376.17,
-      "high": 4454.0,
+      "high": 4633.46,
       "low": 4311.04,
-      "close": 4426.88,
-      "volume": 262823.0571
+      "close": 4600.63,
+      "volume": 834750.2767
+    },
+    {
+      "timestamp": 1756252800000,
+      "datetime": "2025-08-27T00:00:00",
+      "date": "2025-08-27",
+      "open": 4600.63,
+      "high": 4645.93,
+      "low": 4538.69,
+      "close": 4567.18,
+      "volume": 217265.0728
     }
   ]
 }
